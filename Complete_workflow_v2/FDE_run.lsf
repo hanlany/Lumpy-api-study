@@ -1,0 +1,42 @@
+switchtolayout;
+
+### Load FDE file
+input;
+jsonload("input");
+filename = common.name;
+lambda = common.target_wavelength;
+load(filename+".lms");
+
+### Run FDE simulations - find maximum overlap to the reference mode
+cleardcard;
+findmodes;
+loaddata("test_mode.ldf");
+target_mode_origin = bestoverlap("global_mode8");
+visual_E = getresult(target_mode_origin,"E");
+neff_struct = getdata(target_mode_origin,"neff");
+loss_struct = getdata(target_mode_origin,"loss");
+print(" ");
+print("Origin structure mode metrics (10e-9 mesh):");
+?"neff: "+num2str(neff_struct);
+?"loss: "+num2str(loss_struct);
+visualize(visual_E);
+
+### Save X, Y
+mname="::model::FDE::data::material";
+rect_x=getdata(mname,"x");      # position vectors associated with Ex fields
+rect_y=getdata(mname,"y");      # position vectors associated with Ex fields
+rect_nx=getdata(mname,"index_x"); 
+rect_ny=getdata(mname,"index_y"); 
+rect_nz=getdata(mname,"index_z"); 
+select("AlGaAs-Bot");
+AlGaAs_index=getindex(get("material"),c/lambda);
+select("GaAs-Core");
+GaAs_index=getindex(get("material"),c/lambda);
+select("Gold-Top");
+Au_index=getindex(get("material"),c/lambda);
+gridfilename="rect_grid"; # set filename.
+savedata(gridfilename,rect_x,rect_y,AlGaAs_index,GaAs_index,Au_index,rect_nx,rect_ny,rect_nz); 
+
+
+#switchtolayout;
+

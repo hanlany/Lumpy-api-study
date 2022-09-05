@@ -1,0 +1,65 @@
+##############################################
+# Script file: InGaAs_materials_model.lsf
+#
+# Description:
+#    This script creates the material models
+#    necessary for this example.
+#    It will also reproduce index from the
+#    reference paper.
+#
+# Copyright 2020, Ansys Inc.
+##############################################
+# Refractive Index, Absorption Coefficient, and Photoelastic Constant:
+# Key Parameters of InGaAs Material Relevant to InGaAs-Based Device Performance
+# Alam, M. S., Rahman, M. S., Islam, M. R., Bhuiyan, A. G., & Yamada, M.
+# 02 July 2007| Conference paper | DOI:10.1109/ICIPRM.2007.381193 |
+# 2007 IEEE 19th International Conference on Indium Phosphide & Related Materials
+
+##########################################################
+
+
+##########################################################
+# this function return complex-valued refractive index
+# for the frequencies and composition fraction specified
+# Inputs are:
+#     x : alloy composition fraction
+#     f : frequency in Hz
+function n_InGaAs_alam(x,frequency,warningfilename) {
+    x = 1-x; #different convention
+    
+    E = frequency*h/e; #photon energy [eV]
+ 
+    A=9.29-4.93*x;
+    B=7.86+2.66*x;
+    delta_0=0.34+0.09*x;
+    Ex=1.424-1.56*x+0.494*x^2;
+    diff=E-Ex;
+    chi_0=E/Ex;
+    n = struct;
+    if(any(find(chi_0 > 1))){
+        if((max(chi_0)-1)*100 >= 20){ # 20% larger photon energy than bandgap issues warning
+            n.warning = "model is valid for photon energies not much larger than the direct bandgap (Eg="+num2str(c*h/Ex/e*1e9)+"nm). "+endl+
+            "For energies much above the bandgap make sure it still makes sense to use it.";
+        }
+        chi_0(find(chi_0 > 1)) = 1; #limit chi_0 to values <= 1 (photon energy up to bandgap)
+    }
+    chi=chi_0*Ex/(Ex+delta_0);
+    fx=1/chi_0^2*(2-(1+chi_0)^0.5-(1-chi_0)^0.5);
+    fs0=1/chi^2*(2-(1+chi)^0.5-(1-chi)^0.5);
+    epsilon=A*(fx+0.5*(Ex/(Ex+delta_0))^1.5*fs0)+B;
+    n.n = sqrt(epsilon);
+               
+    return n;
+}
+
+function n_Alam(material,x,frequency) {
+    supported_materials_and_models_list;
+    if(material == alam_materials{1}){
+        return n_InGaAs_alam(x(1),frequency,warningfilename);
+    }else{
+        n = struct;
+        n.err = material + "::alam does not exist";
+        n.n = 0;
+        return n;
+    }
+}

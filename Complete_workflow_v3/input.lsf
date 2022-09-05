@@ -1,0 +1,35 @@
+common = struct;
+charge = struct;
+
+
+common.name = "GAAS_MOD"; # the name of the project, serves as the stem for all file names generated
+common.target_wavelength = 1.55e-6; #[m] 1550 nm is the target wavelength in this model
+common.gold_gap = 2e-6;
+common.waveguide_width = 1e-6;
+common.topAlGaAs_thickness = 8e-7;
+# Name of the geometries
+common.geometry1 = "GaAs-Base";
+common.geometry2 = "AlGaAs-Bot";
+common.geometry3 = "GaAs-Core";
+common.geometry4 = "AlGaAs-Top";
+common.geometry5 = "Gold-Top";
+common.geometry6 = "Gold-Side";
+
+# Parameters of the geometries
+common.geometry1_x = 1e-3; # [m] the width of GaAs waffle base 
+common.geometry1_y = 3e-4;# [m] the thickness of GaAs waffle base
+common.geometry2_x = 1e-3; # [m] the width of the bottom AlGaAs (same as waffle base)
+common.geometry2_y = 1e-6;# [m] the thickness of the bottom AlGaAs
+common.geometry3_x = common.waveguide_width; # [m] the width of the waveguide mode GaAs core
+common.geometry3_y = 4e-7;# [m] the thickness of the waveguide mode GaAs core
+common.geometry4_x = common.waveguide_width; # [m] the width of the top AlGaAs (same as core)
+common.geometry4_y = common.topAlGaAs_thickness;# [m] the thickness of the top AlGaAs
+common.geometry5_x = common.waveguide_width; # [m] the width of the top Gold layer (same as core)
+common.geometry5_y = 1e-7;# [m] the thickness of the top Gold layer
+common.geometry6_x = 1e-6; # [m] the width of the side Gold layer
+common.geometry6_y = 1e-7;# [m] the thickness of the side Gold layer
+
+charge.bias = 1; #[V] anode bias at which to calculate electric fields
+
+
+jsonsave("input",common,charge);

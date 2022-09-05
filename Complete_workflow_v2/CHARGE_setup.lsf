@@ -1,0 +1,157 @@
+### Clearing
+switchtolayout;
+deleteall;
+clear;
+clc;
+
+### Helper functions
+
+### INPUT
+input;
+jsonload("input");
+load("empty.ldev");
+filename = common.name;
+lambda = common.target_wavelength;
+gold_gap = common.gold_gap;
+waveguide_width = common.waveguide_width;
+topAlGaAs_thickness = common.topAlGaAs_thickness;
+voltage_bias = charge.bias;
+
+### Materials Setup
+## AlGaAs
+addmodelmaterial;
+set("name","AlGaAs");
+addmaterialproperties("CT","AlGaAs (Aluminium Gallium Arsenide)");
+select("materials::AlGaAs");
+addmaterialproperties("HT","AlGaAs (Aluminium Gallium Arsenide)");
+select("materials::AlGaAs");
+set("color",[0,1,0,1]);
+## GaAs
+addmodelmaterial;
+set("name","GaAs");
+addmaterialproperties("CT","GaAs (Gallium Arsenide)");
+select("materials::GaAs");
+addmaterialproperties("HT","GaAs (Gallium Arsenide)");
+select("materials::GaAs");
+set("color",[0.6,0,1,1]);
+## Au
+addmodelmaterial;
+set("name","Au");
+addmaterialproperties("CT","Au (Gold) - CRC");
+select("materials::Au");
+addmaterialproperties("HT","Au (Gold) - CRC");
+select("materials::Au");
+set("color",[1,1,0,1]);
+## Air
+addmodelmaterial;
+set("name","Air");
+addmaterialproperties("CT","Air");
+select("materials::Air");
+addmaterialproperties("HT","Air");
+
+### Geometry Setup
+# Geometry 1
+addrect;
+set("name",common.geometry1);
+set("x",0);
+set("x span",common.geometry1_x);
+set("y",-((common.geometry1_y)/2 + common.geometry2_y));
+set("y span",common.geometry1_y);
+set("z",0);
+set("z span",10e-6);
+set("material","GaAs");
+# Geometry 2
+addrect;
+set("name",common.geometry2);
+set("x",0);
+set("x span",common.geometry2_x);
+set("y",-(common.geometry2_y)/2);
+set("y span",common.geometry2_y);
+set("z",0);
+set("z span",10e-6);
+set("material","AlGaAs");
+# Geometry 3
+addrect;
+set("name",common.geometry3);
+set("x",(gold_gap+waveguide_width)/2);
+set("x span",waveguide_width);
+set("y",(common.geometry3_y)/2);
+set("y span",common.geometry3_y);
+set("z",0);
+set("z span",10e-6);
+set("material","GaAs");
+# Geometry 4
+addrect;
+set("name",common.geometry4);
+set("x",(gold_gap+waveguide_width)/2);
+set("x span",waveguide_width);
+set("y",(topAlGaAs_thickness)/2+common.geometry3_y);
+set("y span",topAlGaAs_thickness);
+set("z",0);
+set("z span",10e-6);
+set("material","AlGaAs");
+# Geometry 5
+addrect;
+set("name",common.geometry5);
+set("x",(gold_gap+waveguide_width)/2);
+set("x span",waveguide_width);
+set("y",(common.geometry5_y)/2+topAlGaAs_thickness+common.geometry3_y);
+set("y span",common.geometry5_y);
+set("z",0);
+set("z span",10e-6);
+set("material","Au");
+# Geometry 6
+addrect;
+set("name",common.geometry6);
+set("x",-(gold_gap+common.geometry6_x)/2);
+set("x span",common.geometry6_x);
+set("y",(common.geometry6_y)/2);
+set("y span",common.geometry6_y);
+set("z",0);
+set("z span",10e-6);
+set("material","Au");
+
+### Simulation setup
+# Simulation region
+select("simulation region");
+set("dimension",3);
+set("background material","Air");
+set("x",0);
+set("x span",10e-6);
+set("y min",-1e-6);
+set("y max",2e-6);
+set("z",0);
+# Add monitor
+addefieldmonitor;
+set("name","E_field");
+set("monitor type",7);  # 2D z-normal
+set("x",0);
+set("x span",10e-6);
+set("y min",-1e-6);
+set("y max",2e-6);
+set("z",0);
+set("record electrostatic potential",1);
+set("record electric field",1);
+# Add boundary conditions
+addelectricalcontact;
+set("name","anode");
+set("bc mode","steady state");
+set("sweep type","single");
+set("voltage",0.143507);  # setting the voltage to 0 V
+set("surface type","solid");
+set("solid","Gold-Side");
+addelectricalcontact;
+set("name","cathode");
+set("bc mode","steady state");
+set("sweep type","single");
+set("voltage",voltage_bias+0.143507);  # setting the voltage to 1 V
+set("surface type","solid");
+set("solid","Gold-Top");
+# Set min edge length
+select("CHARGE");
+set("min edge length",1e-9);
+set("max edge length",1e-6);
+
+### Save ldev file
+switchtolayout;
+save(filename+".ldev");

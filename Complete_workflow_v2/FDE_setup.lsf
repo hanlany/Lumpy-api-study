@@ -1,0 +1,122 @@
+### Clearing
+switchtolayout;
+deleteall;
+clear;
+clc;
+
+### INPUT
+input;
+jsonload("input");
+load("empty.lms");
+filename = common.name;
+lambda = common.target_wavelength;
+gold_gap = common.gold_gap;
+waveguide_width = common.waveguide_width;
+topAlGaAs_thickness = common.topAlGaAs_thickness;
+
+### Materials Setup
+III_V_index_models;
+freq = linspace(c/2000e-9,c/1000e-9,100);
+mat = "Al(x)Ga(1-x)As";
+model = "adachi";
+x = 0.40;
+n = getmyindex(mat,model,x,freq);
+add_my_material("AlGaAs-0.40Al",freq,n.n,[0,1,0.5,0]);
+
+
+### Geometry Setup 
+# Geometry 1
+addrect;
+set("name",common.geometry1);
+set("x",0);
+set("x span",common.geometry1_x);
+set("y",-((common.geometry1_y)/2 + common.geometry2_y));
+set("y span",common.geometry1_y);
+set("z",0);
+set("z span",10e-6);
+set("material","GaAs - Palik");
+# Geometry 2
+addrect;
+set("name",common.geometry2);
+set("x",0);
+set("x span",common.geometry2_x);
+set("y",-(common.geometry2_y)/2);
+set("y span",common.geometry2_y);
+set("z",0);
+set("z span",10e-6);
+set("material","AlGaAs-0.40Al");
+# Geometry 3
+addrect;
+set("name",common.geometry3);
+set("x",(gold_gap+waveguide_width)/2);
+set("x span",waveguide_width);
+set("y",(common.geometry3_y)/2);
+set("y span",common.geometry3_y);
+set("z",0);
+set("z span",10e-6);
+set("material","GaAs - Palik");
+# Geometry 4
+addrect;
+set("name",common.geometry4);
+set("x",(gold_gap+waveguide_width)/2);
+set("x span",waveguide_width);
+set("y",(topAlGaAs_thickness)/2+common.geometry3_y);
+set("y span",topAlGaAs_thickness);
+set("z",0);
+set("z span",10e-6);
+set("material","AlGaAs-0.40Al");
+# Geometry 5
+addrect;
+set("name",common.geometry5);
+set("x",(gold_gap+waveguide_width)/2);
+set("x span",waveguide_width);
+set("y",(common.geometry5_y)/2+topAlGaAs_thickness+common.geometry3_y);
+set("y span",common.geometry5_y);
+set("z",0);
+set("z span",10e-6);
+set("material","Au (Gold) - Palik");
+# Geometry 6
+addrect;
+set("name",common.geometry6);
+set("x",-(gold_gap+common.geometry6_x)/2);
+set("x span",common.geometry6_x);
+set("y",(common.geometry6_y)/2);
+set("y span",common.geometry6_y);
+set("z",0);
+set("z span",10e-6);
+set("material","Au (Gold) - Palik");
+
+### Simulation setup
+# Mesh setup
+addmesh;
+set("name","mesh_wg");
+# set if to base on a structure
+set("based on a structure",1);
+set("structure",common.geometry3);
+# enable in X direction and disable in Y,Z directions
+set("override x mesh",1);
+set("override y mesh",1);
+set("override z mesh",1);
+# restrict mesh by defining maximum step size
+set("set maximum mesh step",1);
+set("dx",5e-9);
+set("dy",5e-9);
+set("dz",5e-9);
+# FDE simulation setup
+addfde;
+set("solver type",3);
+set("x",0);
+set("x span",10e-6);
+set("y min",-1e-6);
+set("y max",2e-6);
+set("z",0);
+
+## Test run
+##findmodes;
+
+## Save d-card
+# Done
+
+### Save lms file
+switchtolayout;
+save(filename+".lms");

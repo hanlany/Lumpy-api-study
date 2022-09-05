@@ -1,0 +1,35 @@
+switchtolayout;
+
+### Load CHARGE file
+input;
+jsonload("input");
+filename = common.name;
+load(filename+".ldev");
+
+### Run CHARGE simulations 
+switchtolayout;
+run;
+
+### Get result
+electro_stats=getresult("::model::CHARGE","electrostatics");
+Ey = pinch(electro_stats.E(:,1,1,2));
+
+### Convert Tri grid to rect linear one
+# We will use Ey as our data here
+# "L" is the number of vertices, "bb" is the number of bias points.
+temp = size(Ey);
+L = temp(1); # get the length of N (this is basically the number of vertices).
+vtx = getdata("CHARGE","charge","vertices"); # dimension is [L, 3]. It stores the x, y, z coordinates of all the vertices.
+tri = getdata("CHARGE","charge","elements");# dimension is [ee, 3]. It stores the index of the 3 vertices for all elements. 
+# "ee" is the total number of triangular elements.
+vtx = vtx(1:L,[1,2]);
+# Get x, y from file rect_grid.ldf
+loaddata("rect_grid.ldf");
+# Convert and visualize result
+rect_Ey = interptri(tri,vtx,Ey,rect_x,rect_y); 
+image(rect_x,rect_y,rect_Ey);
+
+### Save X, Y
+gridfilename="rect_Ey"; # set filename.
+savedata(gridfilename,rect_Ey); 
+#switchtolayout;

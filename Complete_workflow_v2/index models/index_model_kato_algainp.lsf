@@ -1,0 +1,100 @@
+##############################################
+# Script file: micro_LED_AlGaInO_mdf.lsf
+#
+# Description:
+#    This script creates the material models
+#    necessary for this example.
+#    It will also reproduce fig 10 from the
+#    reference paper.
+#
+# Copyright 2020, Ansys Inc.
+##############################################
+
+#Model dielectric function (MDF) for (AlxGa1-x)0.5In0.5P latticed matched to GaAs
+#Reference: 1994, Kato, Optical Properties of AlGaInP Quaternary Alloys
+
+##########################################################
+# modified Heaviside function
+function H(x,eps) {
+    return 1-atan2(eps,x)/pi;
+    #return x>=0.;
+}
+
+##########################################################
+# this function return complex-valued refractive index
+# for the frequencies and composition fraction specified
+# the result is dimension N x M where N is the length of x
+# and M is the length of frequency. Inpus are:
+#     x : alloy composition fraction
+#     f : frequency in Hz
+function n_AlGaInP_Kato(x,frequency) {
+    
+    E = frequency*h/e; #photon energy [eV]
+    
+    ############ IMPLEMENTATION ################
+    eps = zeros(length(x),length(E)); #complex permittivity
+    nr = zeros(length(x),length(E)); #refractive index
+    k = zeros(length(x),length(E)); #attenuation coefficient
+    for(i=1:length(x)){
+        #MDF contribution from E0 critical point (CP) of type 3D-M0
+        E0 = 1.89 + 0.64*x(i);
+        A = 4.27 + 6.45*x(i);
+        Gamma = 0.059 - 0.031*x(i);
+        Delta0 = 0; #unused
+        chi0 = (E + 1i*Gamma)/E0;
+        chiso = (E + 1i*Gamma)/(E0 + Delta0);
+        f0 = chi0^(-2) * (2.0 - (1 + chi0)^0.5 - (1 - chi0)^0.5);
+        fso = 0; # unused, when used equal to chiso^(-2) * (2.0 - (1 + chiso)^0.5 - (1 - chiso)^0.5);
+        epsE0 = A * E0^(-1.5) * (f0 + 1.0/2.0*(E0 / (E0 + Delta0))^(1.5) * fso);
+        
+        #MDF contribution from E1 CP
+        E1 = 3.28 + 0.33*x(i) + 0.13*x(i)^2;
+        B1 = 5.02 + 0.88*x(i) - 1.95*x(i)^2;
+        Gamma = 0.3 + 0.12*x(i) - 0.06*x(i)^2;
+        chi1d = (E + 1i*Gamma)/E1;
+        epsE1 = -B1 * chi1d^(-2) * log(1 - chi1d^2);
+        
+        #MDF exciton contribution
+        B1x = 2.39 + 0.15*x(i) + 0.5*x(i)^2;
+        n = 1;
+        G2D1 = 0; #unused
+        E2Dx1 = E1 - G2D1 / (n - 1.0/2.0)^2;
+        epsExc = B1x / (E2Dx1 - E - 1i*Gamma);
+        
+        #MDF contribution from E2 CP
+        E2 = 4.78 - 0.05*x(i) + 0.06*x(i)^2;
+        C = 2.03 - 1.89*x(i) + 1.37*x(i)^2;
+        gamma = 0.178 - 0.105*x(i) + 0.085*x(i)^2;
+        chi2 = E / E2;
+        epsE2 = C / (1 - chi2^2 - 1i*chi2*gamma);
+        
+        #Total complex permittivity
+        eps1inf = 0.56 - 0.68*x(i) + 0.33*x(i)^2; #transparent region correction
+        eps(i,:) = epsE0 + epsE1 + epsExc + epsE2 + eps1inf;
+        
+        pos = find(imag(eps(i,:)),1.5);
+        #eps(i,:) = real(eps(i,:)) + 1i*imag(eps(i,:))*H(frequency-frequency(pos),10e12);
+        eps = real(eps) + 1i*imag(eps)*H(E/E0-1,0.02);
+        
+        #Complex index
+        nr(i,:) = sqrt((sqrt(real(eps(i,:))^2 + imag(eps(i,:))^2) + real(eps(i,:)))/2.0);
+        k(i,:) = sqrt((sqrt(real(eps(i,:))^2 + imag(eps(i,:))^2) - real(eps(i,:)))/2.0);
+    }
+
+    n = struct;
+    n.n = nr+1i*k;
+    
+    return n;
+}
+
+function n_Kato(material,x,frequency) {
+    supported_materials_and_models_list;
+    if(material == kato_materials{1}){
+        return n_AlGaInP_Kato(x(1),frequency);
+    }else{
+        n = struct;
+        n.err = material + "::kato does not exist";
+        n.n = 0;
+        return n;
+    }
+}

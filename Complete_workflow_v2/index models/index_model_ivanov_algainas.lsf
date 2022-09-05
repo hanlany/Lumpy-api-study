@@ -1,0 +1,65 @@
+##############################################
+# Script file: AlGaInAs_material_model.lsf
+#
+# Description:
+#    This script creates the material models
+#    necessary for this example.
+#    It will also reproduce index from the
+#    reference paper.
+#
+# Copyright 2020, Ansys Inc.
+##############################################
+
+# Refractive indices of solid AlGaInAs solutions
+# Ivanov A V, Kurnosov V D, Kurnosov K V, et al
+# 2007| Volume 37, Number 6 | DOI:10.1070/QE2007v037n06ABEH013442 |
+# Quantum Electronics 37 (6) 545
+
+
+##########################################################
+
+
+##########################################################
+# this function return complex-valued refractive index
+# for the frequencies and composition fraction specified
+# Inputs are:
+#     X : (Al0.48In0.52As)X(Ga0.47In0.53As)1-X =AlxGayIn1-x-yAs
+#     f : frequency in Hz
+function n_AlGaInAs_Ivanov(X,frequency) {
+    
+    E = frequency*h/e; #photon energy [eV]
+    
+    x=0.48*X;
+    y=0.47*(1-X);
+    A=1.5*x+1.2*y+1.17*(1-x-y);
+    G1=25*x+30*y+14.7*(1-x-y);
+    G2=110*x+100*y+167*(1-x-y);
+    E0=0.36+1.976*x+0.614*x^2+0.622*y+0.442*y^2+0.657*x*y;
+    E1=2.5+0.686*x+0.614*x^2-0.042*y+0.442*y^2+0.657*x*y;
+    E2=4.7-0.014*x+0.614*x^2-0.142*y+0.442*y^2+0.657*x*y;
+    k=100;
+    
+    n = struct;
+    if((max(E/E0)-1)*100 >= 20){ #20% bigger photon energy than bandgap issues warning
+        n.warning = "model is benchmarked for photon energies up to the direct bandgap (Eg="+num2str(c*h/E0/e*1e9)+"nm). "+endl+
+                    "For energies much above the bandgap make sure it still makes sense to use it.";
+    }    
+    
+    epsilon=1+A/pi*log((E1^2-E^2)/sqrt((E0^2-E^2)^2+(E*E0/k)^2))+G1/(E1^2-E^2)+G2/(E2^2-E^2);
+    eps=real(epsilon);
+    n.n = sqrt(eps);
+    
+    return n;
+}
+
+function n_Ivanov(material,x,frequency) {
+    supported_materials_and_models_list;
+    if(material == ivanov_materials{1}){
+        return n_AlGaInAs_Ivanov(x(1),frequency);
+    }else{
+        n = struct;
+        n.err = material + "::ivanov does not exist";
+        n.n = 0;
+        return n;
+    }
+}

@@ -1,0 +1,236 @@
+#Implements interpolation formulas for InGaAsP and AlInGaAs and underlaying ternaries and binaries for the following parameters:
+#direct bandgap E0, spin-orbit valence band splitting del0, and index parameters A and B
+
+#Uses binary and ternary parameters stored in material_parameters_for_index_model.lsf.
+
+#References:
+#1996, Guden, Material parameters for quaternary III-V semiconductors for multilayer mirrors at 1550 nm wavelength
+#C. K. Williams, et al. Journal of Electronic Materials, Vol. 7, No. 5, 1978.
+#For ternaries: linear interpolation with bowing for some parameters (band gap and spin-orbit split-off).
+
+#Main functions:
+# buildQuaternaryMaterialWilliams(name,T,dEg_dT_300K,x,y)
+# buildTernaryMaterial(name,T,dEg_dT_300K,x)
+
+#Usage example:
+#result = buildQuaternaryMaterialWilliams("In(1-x-y)Al(x)Ga(y)As",300,0,0.27,0.21);
+#This returns a struct where fields represent different material properties.
+#Second and third argument are T and dEg/dT gradient if known. It is applied as (T-300)*dEg/dT.
+#The last two arguments are x and y molar fractions with respect to the form given by the first argument.
+
+
+#Ternary linear interpolation with bowing
+function generalTernaryInterpolation(b1,b2,C,x){
+    return b1*x + b2*(1-x) + C*x*(1-x);
+}
+
+function generalTernaryInterpolationAllFields(b1,b2,tern,x){
+    ABC = struct;
+    ABC.E0 = generalTernaryInterpolation(b1.E0,b2.E0,tern.CE0,x);
+    ABC.del0 = generalTernaryInterpolation(b1.del0,b2.del0,tern.Cdel0,x);
+    ABC.A = generalTernaryInterpolation(b1.A,b2.A,0,x);
+    ABC.B = generalTernaryInterpolation(b1.B,b2.B,0,x);
+
+    return ABC;
+}
+
+function generalQuaternaryInterpolationWilliamsType1(b1,b2,b3,b4,x,y){
+    return (x*(1-x)*((1-y)*b1+y*b2)+y*(1-y)*(x*b3+(1-x)*b4))/(x*(1-x)+y*(1-y));
+}
+
+function generalQuaternaryInterpolationWilliamsType2(b1,b2,b3,x,y){
+    return (x*y*b1+y*(1-x-y)*b2+(1-x-y)*x*b3)/(x*y+y*(1-x-y)+(1-x-y)*x);
+}
+
+function ternaryPropStruct(name){
+    material_parameters_piprekadachi1996;
+    if(name == "Al(x)Ga(1-x)As"){
+        return AlGaAs;
+    }else if(name == "Ga(x)In(1-x)As"){
+        return GaInAs;
+    }else if(name == "Al(x)In(1-x)As"){
+        return AlInAs;
+    }else if(name == "GaAs(x)P(1-x)"){
+        return GaAsP;
+    }else if(name == "Al(x)Ga(1-x)P"){
+        return AlGaP;
+    }else if(name == "Al(x)In(1-x)P"){
+        return AlInP;
+    }else if(name == "Ga(x)In(1-x)P"){
+        return GaInP;
+    }else{
+        assert("ternaryPropStruct: name unknown.",0);
+    }
+}
+
+#Decompose ternary into binaries
+function decomposeTernary(name){
+    binaryBasis = cell(2);
+    material_parameters_piprekadachi1996;
+    
+    if(name == "Al(x)Ga(1-x)As"){
+        binaryBasis{1} = AlAs;
+        binaryBasis{2} = GaAs;
+    }else if(name == "Ga(x)In(1-x)As"){
+        binaryBasis{1} = GaAs;
+        binaryBasis{2} = InAs;
+    }else if(name == "Al(x)In(1-x)As"){
+        binaryBasis{1} = AlAs;
+        binaryBasis{2} = InAs;
+    }else if(name == "GaAs(x)P(1-x)"){
+        binaryBasis{1} = GaAs;
+        binaryBasis{2} = GaP;
+    }else if(name == "Al(x)Ga(1-x)P"){
+        binaryBasis{1} = AlP;
+        binaryBasis{2} = GaP;
+    }else if(name == "Al(x)In(1-x)P"){
+        binaryBasis{1} = AlP;
+        binaryBasis{2} = InP;
+    }else if(name == "Ga(x)In(1-x)P"){
+        binaryBasis{1} = GaP;
+        binaryBasis{2} = InP;
+    }else{
+        assert("decomposeTernary: name unknown.",0);
+    }
+    return binaryBasis;
+}
+
+#dEg_dT_300K is user provided temperature dependence where 300K is reference, if dEg_dT_300K=0 band gap is retruned at 300K regardless of T
+function buildBinaryMaterial(name,T,dEg_dT_300K){
+    material_parameters_piprekadachi1996;
+    
+    AB = struct;
+    if(name == "AlAs"){
+        AB = AlAs;
+    }else if(name == "GaAs"){
+        AB = GaAs;
+    }else if(name == "InAs"){
+        AB = InAs;
+    }else if(name == "InP"){
+        AB = InP;
+    }else if(name == "GaP"){
+        AB = GaP;
+    }else if(name == "AlP"){
+        AB = AlP;
+    }else{
+        assert("buildBinaryMaterialChuang: name unknown.",0);
+    }
+    
+    #Band gap custom temperature dependence
+    AB.eg = AB.eg + dEg_dT_300K*(T-300);
+    
+    return AB;
+}
+
+#dEg_dT_300K is user provided temperature dependence where 300K is reference, if dEg_dT_300K=0 band gap is returned at 300K regardless of T
+function buildTernaryMaterial(name,T,dEg_dT_300K,x){    
+    binaryBasis = decomposeTernary(name);
+    b1 = binaryBasis{1};
+    b2 = binaryBasis{2};
+    
+    tern = ternaryPropStruct(name);
+    
+    #Parameters from the general interpolation formula
+    ABC = struct;
+    ABC.E0 = generalTernaryInterpolation(b1.E0,b2.E0,tern.CE0,x);
+    ABC.del0 = generalTernaryInterpolation(b1.del0,b2.del0,tern.Cdel0,x);
+    ABC.A = generalTernaryInterpolation(b1.A,b2.A,0.0,x);
+    ABC.B = generalTernaryInterpolation(b1.B,b2.B,0.0,x);
+    
+    #Band gap custom temperature dependence
+    ABC.E0 = ABC.E0 + dEg_dT_300K*(T-300);
+    
+    return ABC;
+}
+
+#Based on general interpolation formula from C. K. Williams, et al. Journal of Electronic Materials, Vol. 7, No. 5, 1978.
+function buildQuaternaryMaterialWilliams(name,T,dEg_dT_300K,x,y){
+    material_parameters_piprekadachi1996;
+    
+    ABCD = struct;
+    if(name == "Ga(x)In(1-x)As(y)P(1-y)"){
+        if((x == 0) and (y == 0)){
+            ABCD = InP;
+        }else if((x == 0) and (y == 1)){
+            ABCD = InAs;
+        }else if((x == 1) and (y == 0)){
+            ABCD = GaP;
+        }else if((x == 1) and (y == 1)){
+            ABCD = GaAs;
+        }else{
+            b1 = generalTernaryInterpolationAllFields(GaP,InP,GaInP,x);
+            b2 = generalTernaryInterpolationAllFields(GaAs,InAs,GaInAs,x);
+            b3 = generalTernaryInterpolationAllFields(GaAs,GaP,GaAsP,y);
+            b4 = generalTernaryInterpolationAllFields(InAs,InP,InAsP,y);
+            
+            #Parameters from the general interpolation formula
+            ABCD.E0 = generalQuaternaryInterpolationWilliamsType1(b1.E0,b2.E0,b3.E0,b4.E0,x,y);
+            ABCD.del0 = generalQuaternaryInterpolationWilliamsType1(b1.del0,b2.del0,b3.del0,b4.del0,x,y);
+            ABCD.A = generalQuaternaryInterpolationWilliamsType1(b1.A,b2.A,b3.A,b4.A,x,y);
+            ABCD.B = generalQuaternaryInterpolationWilliamsType1(b1.B,b2.B,b3.B,b4.B,x,y);
+        }
+    }else if(name == "In(1-x-y)Al(x)Ga(y)As"){
+        if((x == 0) and (y == 0)){
+            ABCD = InAs;
+        }else if((x == 0) and (y == 1)){
+            ABCD = GaAs;
+        }else if((x == 1) and (y == 0)){
+            ABCD = AlAs;
+        }else if(x + y > 1){
+            ABCD.E0 = 0;
+            ABCD.del0 = 0;
+            ABCD.A = 0;
+            ABCD.B = 0;
+            ABCD.err = "composition fraction out of range x + y <= 1";
+        }else{
+            z = 1-x-y;
+            u = (1-x+y)/2.;
+            v = (1-y+z)/2.;
+            w = (1-x+z)/2.;
+            b1 = generalTernaryInterpolationAllFields(GaAs,AlAs,AlGaAs,u);
+            b2 = generalTernaryInterpolationAllFields(InAs,GaAs,GaInAs,v);
+            b3 = generalTernaryInterpolationAllFields(InAs,AlAs,AlInAs,w);
+            
+            #Parameters from the general interpolation formula
+            ABCD.E0 = generalQuaternaryInterpolationWilliamsType2(b1.E0,b2.E0,b3.E0,x,y);
+            ABCD.del0 = generalQuaternaryInterpolationWilliamsType2(b1.del0,b2.del0,b3.del0,x,y);
+            ABCD.A = generalQuaternaryInterpolationWilliamsType2(b1.A,b2.A,b3.A,x,y);
+            ABCD.B = generalQuaternaryInterpolationWilliamsType2(b1.B,b2.B,b3.B,x,y);
+        }
+    }else if(name == "Al(x)Ga(y)In(1-x-y)P"){
+        if((x == 0) and (y == 0)){
+            ABCD = InP;
+        }else if((x == 0) and (y == 1)){
+            ABCD = GaP;
+        }else if((x == 1) and (y == 0)){
+            ABCD = AlP;
+        }else if(x + y > 1){
+            ABCD.E0 = 0;
+            ABCD.del0 = 0;
+            ABCD.A = 0;
+            ABCD.B = 0;
+            ABCD.err = "composition fraction out of range x + y <= 1";
+        }else{
+            z = 1-x-y;
+            u = (1-x+y)/2.;
+            v = (1-y+z)/2.;
+            w = (1-x+z)/2.;
+            b1 = generalTernaryInterpolationAllFields(AlP,GaP,AlGaP,u);
+            b2 = generalTernaryInterpolationAllFields(GaP,InP,GaInP,v);
+            b3 = generalTernaryInterpolationAllFields(AlP,InP,AlInP,w);
+            
+            #Parameters from the general interpolation formula
+            ABCD.E0 = generalQuaternaryInterpolationWilliamsType2(b1.E0,b2.E0,b3.E0,x,y);
+            ABCD.del0 = generalQuaternaryInterpolationWilliamsType2(b1.del0,b2.del0,b3.del0,x,y);
+            ABCD.A = generalQuaternaryInterpolationWilliamsType2(b1.A,b2.A,b3.A,x,y);
+            ABCD.B = generalQuaternaryInterpolationWilliamsType2(b1.B,b2.B,b3.B,x,y);
+        }
+    }else{
+        assert("buildQuaternaryMaterialWilliams: name unknown.",0);
+    }
+    
+    #Band gap custom temperature dependence
+    ABCD.E0 = ABCD.E0 + dEg_dT_300K*(T-300);
+    
+    return ABCD;
+}

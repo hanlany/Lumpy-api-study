@@ -1,0 +1,85 @@
+#Model based on Adachi from 1996, Guden, Material parameters for quaternary III-V semiconductors for
+#multilayer mirrors at 1550 nm wavelength
+
+#This script file provides functions and examples how to calculate index.
+
+#Load functions to build material parameters for index model
+material_interpolation_piprekadachi1996;
+
+
+function func(x){
+    return 1/x^2*(2-sqrt(1+x)-sqrt(1-x));
+}
+
+function n_AdachiPiprek_impl(E0,del0,A,B,freq){
+    x0 = h*freq/e/E0;
+    n = struct;
+    if(any(find(x0 > 1))){
+        if((max(x0)-1)*100 >= 20){ #20% bigger photon energy than bandgap issues warning
+            n.warning = "model is valid for photon energies not much larger than the direct bandgap (Eg="+num2str(c*h/E0/e*1e9)+"nm). "+endl+
+                   "For energies much above the bandgap make sure it still makes sense to use it.";
+        }
+        x0(find(x0 > 1)) = 1; #limit x0 to values <= 1 (photon energy up to bandgap)
+    }
+    xos = x0*E0/(E0+del0);
+    n.n = sqrt(A*(func(x0)+0.5*(E0/(E0+del0))^1.5*func(xos)) + B);
+    return n;
+}
+
+function n_AdachiPiprekQuaternary(matName,x,y,freq){
+    matProp = buildQuaternaryMaterialWilliams(matName,300,0,x,y);
+    #?"Eg = " + num2str(matProp.E0) + " eV = " + num2str(c*h/matProp.E0/e*1e9) + " nm"; #print band gap
+    #?"Delta0 = "+num2str(matProp.del0); #print spint-orbit split-off energy
+    if(isfield(matProp,"err")){
+        n = struct;
+        n.err = matProp.err;
+        n.n = 0;
+        return n;
+    }else{
+        return n_AdachiPiprek_impl(matProp.E0,matProp.del0,matProp.A,matProp.B,freq);
+    }
+}
+
+function n_AdachiPiprekTernary(matName,x,freq){
+    matProp = buildTernaryMaterial(matName,300,0,x);
+    #?"Eg = " + num2str(matProp.E0) + " eV = " + num2str(c*h/matProp.E0/e*1e9) + " nm"; #print band gap
+    #?"Delta0 = "+num2str(matProp.del0); #print spint-orbit split-off energy
+    return n_AdachiPiprek_impl(matProp.E0,matProp.del0,matProp.A,matProp.B,freq);
+}
+
+function n_AdachiPiprek(matName,x,freq){
+    supported_materials_and_models_list;
+    if(find(default_ternary_materials == matName) > 0){
+        return n_AdachiPiprekTernary(matName,x(1),freq);
+    } else if(find(default_quaternary_materials == matName) > 0){
+        if(matName == default_quaternary_materials{4}){
+            return n_AdachiPiprekQuaternary(default_quaternary_materials{2},0.48*x(1),0.47*(1-x(1)),freq);
+        }else if(matName == default_quaternary_materials{5}){
+            return n_AdachiPiprekQuaternary(default_quaternary_materials{3},0.5*x(1),0.5*(1-x(1)),freq);
+        }else if(matName == default_quaternary_materials{6}){
+            y = y_ingaasp_inp_lattice_matched(x(1));
+            if(y > 1){
+                n = struct;
+                n.err = "x out of range x <= " + num2str(x_ingaasp_inp_lattice_matched(1)) + ".";
+                n.n = 0;
+                return n;
+            }else{
+                return n_AdachiPiprekQuaternary(default_quaternary_materials{1},x(1),y,freq);
+            }
+        }else{
+            if(length(x) != 2){
+                n = struct;
+                n.err = "Wrong value for the composition variable. The variable must be array of size 2.";
+                n.n = 0;
+                return n;
+            }else{
+                return n_AdachiPiprekQuaternary(matName,x(1),x(2),freq);
+            }
+        }
+    } else{
+        n = struct;
+        n.err = matName + "::default does not exist";
+        n.n = 0;
+        return n;
+    }
+}

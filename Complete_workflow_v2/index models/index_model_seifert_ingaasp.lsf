@@ -1,0 +1,86 @@
+# This script calculates refractive index vs frequency for InGaAsP
+
+# Initializing the functions
+
+function cot(x){
+    y = 1/tan(x);
+    return y;
+}
+
+function n_InGaAsP__InP_HHI(comp,freq){
+    
+    E =h*freq/e;
+    if(isstruct(comp)){
+        x=comp.x;
+        y=comp.y;
+        Eg  = 1.35 +  0.668*x - 1.068*y +0.758*x^2 +  0.078*y^2 - 0.069*x*y - 0.322*x^2*y +0.03*x*y^2;
+    }
+    else{
+        x=y=0;
+        Eg = h*c/comp/e;      
+    }
+    a_xy = 5.8688 -0.417*x + 0.1896*y + 0.0125*x*y; # Angstroms
+    a_InP = 5.868800000000001e-010/1e-10; # Angstroms, value from Device DB
+    f = (a_xy  - a_InP)/a_InP;
+    
+    R = -0.00115 +0.00191*Eg;
+    Gamma = -0.000691+0.00433*Eg;
+    A = -0.0453+2.1103*Eg;
+    a = 72.32+12.78*Eg;
+    b = 4.84+4.66*Eg;
+    cc = -0.015+0.02*Eg;
+    d = -0.178+1.042*Eg;
+        
+    epsilon = 1 + a/(b-(E+1i*Gamma)^2)
+           + A*sqrt(R)/(E+1i*Gamma)^2*(log(Eg^2/(Eg^2 - (E+1i*Gamma)^2)) 
+           + pi*(2*cot(pi*sqrt(R/Eg))-cot(pi*sqrt(R/(Eg-(E+1i*Gamma))))
+                                     -cot(pi*sqrt(R/(Eg+(E+1i*Gamma)))) ) );
+    
+    n = struct;
+        if((max(E/Eg)-1)*100 >= 20){ #20% bigger photon energy than bandgap issues warning
+            n.warning = "model is benchmarked for photon energies not much higher than the direct bandgap (Eg="+num2str(c*h/Eg/e*1e9)+"nm). "+endl+
+                        "For energies much above the bandgap make sure it still makes sense to use it.";
+    }    
+
+    #n.n= real(sqrt(epsilon));
+    n.n= sqrt((abs(epsilon) + real(epsilon))/2.0);
+    k = cc*(E-Eg) + d*(E-Eg)^2;
+    if(min(E)<Eg){
+        k(find(E<Eg)) = 0;
+    }
+    k = k + imag(sqrt(epsilon-1));
+    n.n = n.n + 1i*k;
+           
+    return n;
+    
+## Revised refractive index and absorption of
+## In(1-x)Ga(x)As(y)P(1-y) lattice-matched to InP in
+## transparent and absorption IR-region,
+## Sten Seifert and Patrick Runge,   
+## 1 Feb 2016 | Vol. 6, No. 2 | DOI:10.1364/OME.6.000629 | 
+## OPTICAL MATERIALS EXPRESS p629
+    
+    
+}
+
+function n_Seifert(material,x,frequency) {
+    supported_materials_and_models_list;
+    if(material == seifert_materials{1}){
+        comp = struct;
+        comp.x = x(1);
+        comp.y = y_ingaasp_inp_lattice_matched(x(1));
+        if(comp.y > 1){
+            n = struct;
+            n.err = "x out of range x <= " + num2str(x_ingaasp_inp_lattice_matched(1)) + ".";
+            n.n = 0;
+            return n;
+        }else{
+            return n_InGaAsP__InP_HHI(comp,frequency);
+        }
+    }else{
+        n = struct;
+        n.err = material + "::seifert does not exist";
+        n.n = 0;
+        return n;
+    }
+}

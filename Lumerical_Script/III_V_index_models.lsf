@@ -1,0 +1,206 @@
+scriptdir = filedirectory(currentscriptname);
+addpath(scriptdir + "/index models");
+addpath(scriptdir + "/benchmark data");
+
+function y_ingaasp_inp_lattice_matched(x){ #From Chuang's textbook Physics of Optoelectronic Devices
+    return 0.4184*x/(0.013*x+0.1894);
+}
+
+function x_ingaasp_inp_lattice_matched(y){ #From Chuang's textbook Physics of Optoelectronic Devices
+    return 0.1894*y/(0.4184-0.013*y);
+}
+
+index_model_ivanov_algainas;
+index_model_kato_algainp;
+index_model_kaneko_algainp;
+index_model_seifert_ingaasp;
+index_model_piprekadachi1996;
+index_model_adachi_algaas;
+index_model_alam_ingaas;
+supported_material_benchmarks;
+
+function getsupportedmaterialsandmodels(index){
+    supported_materials_and_models_list;
+    if(index > 0 and index <= length(supported_materials_models)){
+        return supported_materials_models{index};
+    }else{
+        return "";
+    }
+}
+
+function getlineplotcolor(index){
+    color = {"red","orange","yellow","green","cyan","blue","magenta","black"};
+    if(index <= length(color)){
+        return color{index};
+    }else{
+        return color{length(color)};
+    }
+}
+
+function getmaterialnumparameters(material){
+    supported_materials_and_models_list;
+    return supported_materials_num_parameters(find(supported_materials == material));
+}
+
+function validxyrange(material,x,y){
+    if(getmaterialnumparameters(material) == 1){
+        return x >= 0 and x <= 1;
+    }else{
+        return x >= 0 and x <= 1 and y >= 0 and y <= 1;        
+    }
+}
+
+function getmodellongname(shortname){
+    supported_materials_and_models_list;
+    return supported_models_long{find(supported_models == shortname)};
+}
+
+function printsupportedmaterials(){
+    supported_materials_and_models_list;
+    for(i=1:length(supported_materials_models)){
+        ?supported_materials_models{i};
+    }
+}
+
+function getmyindex(material,model,x,freq){
+    supported_materials_and_models_list;
+    if(find(supported_materials_models == material+"::"+model) > 0){
+        if(model == supported_models{1}){
+            return n_AdachiPiprek(material,x,freq);
+        }else if(model == supported_models{2}){
+            return n_Ivanov(material,x,freq);
+        }else if(model == supported_models{3}){
+            return n_Kaneko(material,x,freq);
+        }else if(model == supported_models{4}){
+            return n_Kato(material,x,freq);
+        }else if(model == supported_models{5}){
+            return n_Seifert(material,x,freq);
+        }else if(model == supported_models{6}){
+            return n_Adachi(material,x,freq);
+        }else if(model == supported_models{7}){
+            return n_Alam(material,x,freq);
+        }else{
+            n = struct;
+            n.err = material + "::" + model + " not implemented";
+            n.n = 0;
+            return n;
+        }
+    }else{
+        n = struct;
+        n.err = material + "::" + model + " not implemented";
+        n.n = 0;
+        return n;
+    }
+}
+
+function validateindex(material,model){
+    supported_materials_and_models_list;
+    if(find(supported_materials_models == material+"::"+model) > 0){
+        benchSources = querybenchmarksources(material);
+        for(iS=1; iS <= length(benchSources) and benchSources{1} != ""; iS = iS + 1){
+            benchDataSet = getbenchmarkdata(benchSources{iS},material);
+            comp = benchDataSet.getparameter("x");
+            allparams = splitstring(getparameter(benchDataSet),endl);
+            if(find(allparams == "y") > 0){
+                comp = [comp,benchDataSet.getparameter("y")];
+            }
+            model_freq = benchDataSet.getparameter("frequency");
+            if(length(model_freq)>1){
+                model_freq = linspace(model_freq(1),model_freq(end),100);
+            }
+            model_index = matrix(size(comp,1),length(model_freq));
+            if(model == supported_models{1}){
+                for(iC=1:size(comp,1)){
+                    n = n_AdachiPiprek(material,comp(iC,:),model_freq);
+                    model_index(iC,:) = n.n;
+                }
+            } else if(model == supported_models{2}){
+                model_index = matrix(size(comp,1),length(model_freq));
+                for(iC=1:size(comp,1)){
+                    n = n_Ivanov(material,comp(iC,:),model_freq);
+                    model_index(iC,:) = n.n;
+                }
+            } else if(model == supported_models{3}){
+                model_index = matrix(size(comp,1),length(model_freq));
+                for(iC=1:size(comp,1)){
+                    n = n_Kaneko(material,comp(iC,:),model_freq);
+                    model_index(iC,:) = n.n;
+                }
+            } else if(model == supported_models{4}){
+                model_index = matrix(size(comp,1),length(model_freq));
+                for(iC=1:size(comp,1)){
+                    n = n_Kato(material,comp(iC,:),model_freq);
+                    model_index(iC,:) = n.n;
+                }
+            } else if(model == supported_models{5}){
+                model_index = matrix(size(comp,1),length(model_freq));
+                for(iC=1:size(comp,1)){
+                    n = n_Seifert(material,comp(iC,:),model_freq);
+                    model_index(iC,:) = n.n;
+                }
+            } else if(model == supported_models{6}){
+                model_index = matrix(size(comp,1),length(model_freq));
+                for(iC=1:size(comp,1)){
+                    n = n_Adachi(material,comp(iC,:),model_freq);
+                    model_index(iC,:) = n.n;
+                }
+            } else if(model == supported_models{7}){
+                model_index = matrix(size(comp,1),length(model_freq));
+                for(iC=1:size(comp,1)){
+                    n = n_Alam(material,comp(iC,:),model_freq);
+                    model_index(iC,:) = n.n;
+                }
+            }
+            ref_index = benchDataSet.getattribute("index");
+            leg = cell(2*size(comp,1));
+            ref_lambda = benchDataSet.getparameter("wavelength");
+            if(sum(imag(ref_index)) == 0){
+                model_index = real(model_index);
+            }
+            for(iC=1:size(comp,1)){
+                comp_string = "x="+num2str(comp(iC,1));
+                if(size(comp,2) > 1){
+                    comp_string = comp_string + ", y=" + num2str(comp(iC,2));
+                }
+                ref_index_this = ref_index(iC,:);
+                plot_ind = find(ref_index_this != 0);
+                plot(ref_lambda(plot_ind)*1e9,ref_index_this(plot_ind),"wavelength [nm]","index","","plot type = point,marker style = x,marker size = 10,color="+getlineplotcolor(iC));
+                leg{2*iC-1} = "reference " + comp_string;
+                holdon;
+                if(length(model_freq)>1){
+                    plot(c/model_freq*1e9,model_index(iC,:),"","","","linewidth=3,color="+getlineplotcolor(iC));
+                }else{
+                    plot(c/model_freq*1e9,model_index(iC,:),"","","","plot type = point,marker style = o,marker size = 10,color="+getlineplotcolor(iC));
+                }
+                leg{2*iC} = "model " + comp_string;
+            }
+            setplot("title",material+"::"+model + endl + "Ref: " + getbenchmarksourcelongname(benchSources{iS}) + endl + "Mod: " + getmodellongname(model));
+            legend(leg);
+            holdoff;
+        }
+    }else{
+        ?material + "::" + model + " not supported";
+    }
+}
+
+##########################################################
+# This function adds the material to the database
+# as a sampled 3D data material. It removes any existing
+# material of the same name. The 'color' input is purely for
+# rendering in the UI and has nothing to do with the physical
+# properties of the material. Inputs are:
+#    name : string name of the material
+#    f : frequency in Hz
+#    n : complex refractive index
+#    color : the color as [Red, Green, Blue, Alpha].
+function add_my_material(name,f,n,color) {
+    if(findstring(getmaterial,name) > 0) {
+        deletematerial(name);
+        ?"Warning, deleted old material: " + name + " before adding it again";
+    }
+    tempname = addmaterial("Sampled 3D data");
+    setmaterial(tempname,"name",name);
+    eps = n^2;
+    setmaterial(name,"sampled 3d data",[pinch(f),pinch(eps)]);
+    setmaterial(name,"color",color);
+}

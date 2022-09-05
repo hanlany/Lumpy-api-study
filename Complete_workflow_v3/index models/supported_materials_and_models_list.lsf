@@ -1,0 +1,116 @@
+#order matters, add new materials to the end
+supported_materials = {"Al(x)Ga(1-x)As",
+                       "Ga(x)In(1-x)As",
+                       "Al(x)In(1-x)As",
+                       "GaAs(x)P(1-x)",
+                       "Al(x)Ga(1-x)P",
+                       "Al(x)In(1-x)P",
+                       "Ga(x)In(1-x)P",
+                       "Ga(x)In(1-x)As(y)P(1-y)",
+                       "In(1-x-y)Al(x)Ga(y)As",
+                       "Al(x)Ga(y)In(1-x-y)P",
+                       "(Al0.48In0.52As)x(Ga0.47In0.53As)1-x",
+                       "(AlxGa1-x)0.5In0.5P",
+                       "In(1-x)Ga(x)As(f(x))P(1-f(x))"};
+
+supported_materials_num_parameters = [1,1,1,1,1,1,1,2,2,2,1,1,1];
+
+default_ternary_materials = {supported_materials{1},
+supported_materials{2},
+supported_materials{3},
+supported_materials{4},
+supported_materials{5},
+supported_materials{6},
+supported_materials{7}};
+
+default_quaternary_materials = {supported_materials{8},
+supported_materials{9},
+supported_materials{10},
+supported_materials{11},
+supported_materials{12},
+supported_materials{13}};
+
+ivanov_materials = {supported_materials{11}};
+
+kaneko_materials = {supported_materials{12}};
+
+kato_materials = {supported_materials{12}};
+
+seifert_materials = {supported_materials{13}};
+
+adachi_materials = {supported_materials{1}};
+
+alam_materials = {supported_materials{2}};
+
+supported_models = {"default",
+                    "ivanov",
+                    "kaneko",
+                    "kato",
+                    "seifert",
+                    "adachi",
+                    "alam"};
+                    
+supported_models_long = {"Guden, Modelling Simul. Mater. Sci. Eng. 4 (1996) 349–357",
+                         "Ivanov, Quantum Elec., 2007, 37(6): 545",
+                         "Kaneko, J. Appl. Phys., 1994, 76(3): 1809-1818",
+                         "Kato, Jpn. J. Appl. Phys., 1994, 33(1R): 186",
+                         "Seifert, Opt. Mater., 2016, 6(2): 629-639",
+                         "Adachi, J. Appl. Phys., 1985, 58, 3, DOI:10.1063/1.336070",
+                         "Alam, 2007, DOI:10.1109/ICIPRM.2007.381193"};
+                         
+supported_materials_models = cell(length(default_ternary_materials)+length(default_quaternary_materials)+
+                           length(ivanov_materials)+length(kaneko_materials)+length(kato_materials)+length(seifert_materials)+
+                           length(adachi_materials)+length(alam_materials)); #stores all materials
+counter = 1;
+for(i=1:length(supported_materials)){
+    if(find(default_ternary_materials == supported_materials{i})){
+        supported_materials_models{counter} = supported_materials{i} + "::default";
+        counter = counter + 1;
+    }
+    if(find(default_quaternary_materials == supported_materials{i})){
+        supported_materials_models{counter} = supported_materials{i} + "::default";
+        counter = counter + 1;
+    }
+    if(find(ivanov_materials == supported_materials{i})){
+        supported_materials_models{counter} = supported_materials{i} + "::ivanov";
+        counter = counter + 1;
+    }    
+    if(find(kaneko_materials == supported_materials{i})){
+        supported_materials_models{counter} = supported_materials{i} + "::kaneko";
+        counter = counter + 1;
+    }    
+    if(find(kato_materials == supported_materials{i})){
+        supported_materials_models{counter} = supported_materials{i} + "::kato";
+        counter = counter + 1;
+    }    
+    if(find(seifert_materials == supported_materials{i})){
+        supported_materials_models{counter} = supported_materials{i} + "::seifert";
+        counter = counter + 1;
+    }    
+    if(find(adachi_materials == supported_materials{i})){
+        supported_materials_models{counter} = supported_materials{i} + "::adachi";
+        counter = counter + 1;
+    }        
+    if(find(alam_materials == supported_materials{i})){
+        supported_materials_models{counter} = supported_materials{i} + "::alam";
+        counter = counter + 1;
+    }        
+}
+
+benchmark_sources = {"seifert2016",
+                     "ivanov2007",
+                     "papatryfonos2021",
+                     "palik",
+                     "kato1994",
+                     "kaneko1994",
+                     "guden1996"};
+
+benchmark_sources_long = {"Seifert, Opt. Mater., 2016, 6(2): 629-639",
+                          "Ivanov, Quantum Elec., 2007, 37(6): 545",
+                          "Papatryfonos, AIP Advances, 2021, 11(2): 025327",
+                          "Palik (Lumerical material database)",
+                          "Kato, Jpn. J. Appl. Phys, 1994, 33(1R): 186",
+                          "Kaneko, J. Appl. Phys., 1994, 76(3): 1809-1818",
+                          "Guden, Modelling Simul. Mater. Sci. Eng. 4 (1996) 349–357"};
+                          
+warningfilename = ".compound_optical_database_wizard_warning.txt";

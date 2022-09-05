@@ -1,0 +1,66 @@
+##############################################
+# Script file: AlGaAs_materials_model.lsf
+#
+# Description:
+#    This script creates the material models
+#    necessary for this example.
+#    It will also reproduce index from the
+#    reference paper.
+#
+# Copyright 2020, Ansys Inc.
+##############################################
+
+# GaAs, AlAs, and AlxGa1?xAs: Material parameters for
+# use in research and device applications,
+# Sadao Adachi,   
+# 1985 | Vol. 58, No. 3 | DOI:10.1063/1.336070 | 
+# Journal of Applied Physics
+
+##########################################################
+
+
+##########################################################
+# this function return complex-valued refractive index
+# for the frequencies and composition fraction specified
+# Inputs are:
+#     x : alloy composition fraction
+#     f : frequency in Hz
+
+
+function n_AlGaAs_adachi(x,frequency) {
+    
+    E = frequency*h/e; #photon energy [eV]
+    
+    E0        = 1.425 + 1.155*x + 0.37*x^2; # eV, AlxGa1-xAs
+    E0_delta0 = 1.765 + 1.115*x + 0.37*x^2; # eV, AlxGa1-xAs
+    A0        = 6.3   + 19.0*x;
+    B0        = 9.4   - 10.2*x;
+    X         = E / (E0);
+    n = struct;
+    if(any(find(X > 1))){
+        if((max(X)-1)*100 >= 20){ # 20% larger photon energy than bandgap issues warning
+            n.warning = "model is valid for photon energies not much larger than the direct bandgap (Eg="+num2str(c*h/E0/e*1e9)+"nm). "+endl+
+            "For energies much above the bandgap make sure it still makes sense to use it.";
+        }
+        X(find(X > 1)) = 1; #limit X to values <= 1 (photon energy up to bandgap)
+    }
+    Xso       = X * E0 / (E0_delta0);
+    fX        = X ^-2  * (2 - sqrt(1+X) - sqrt(1-X));
+    fXso      = Xso ^-2 * (2 - sqrt(1+Xso) - sqrt(1-Xso));
+    epsilon = A0 * (fX + 0.5 * sqrt((E0/E0_delta0))^3 * fXso) + B0;
+    n.n = sqrt(epsilon);
+              
+    return n;   
+}
+
+function n_Adachi(material,x,frequency) {
+    supported_materials_and_models_list;
+    if(material == adachi_materials{1}){
+        return n_AlGaAs_adachi(x(1),frequency);
+    }else{
+        n = struct;
+        n.err = material + "::adachi does not exist";
+        n.n = 0;
+        return n;
+    }
+}

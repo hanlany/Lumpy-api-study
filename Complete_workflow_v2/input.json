@@ -1,0 +1,32 @@
+{
+  "charge" : 
+  {
+    "bias" : 1.0
+  },
+  "common" : 
+  {
+    "geometry1" : "GaAs-Base",
+    "geometry1_x" : 0.001,
+    "geometry1_y" : 0.00029999999999999997,
+    "geometry2" : "AlGaAs-Bot",
+    "geometry2_x" : 0.001,
+    "geometry2_y" : 9.9999999999999995e-07,
+    "geometry3" : "GaAs-Core",
+    "geometry3_x" : 9.9999999999999995e-07,
+    "geometry3_y" : 3.9999999999999998e-07,
+    "geometry4" : "AlGaAs-Top",
+    "geometry4_x" : 9.9999999999999995e-07,
+    "geometry4_y" : 7.9999999999999996e-07,
+    "geometry5" : "Gold-Top",
+    "geometry5_x" : 9.9999999999999995e-07,
+    "geometry5_y" : 9.9999999999999995e-08,
+    "geometry6" : "Gold-Side",
+    "geometry6_x" : 9.9999999999999995e-07,
+    "geometry6_y" : 9.9999999999999995e-08,
+    "gold_gap" : 1.9999999999999999e-06,
+    "name" : "GAAS_MOD",
+    "target_wavelength" : 1.55e-06,
+    "topAlGaAs_thickness" : 7.9999999999999996e-07,
+    "waveguide_width" : 9.9999999999999995e-07
+  }
+}
